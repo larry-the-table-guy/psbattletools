@@ -35,9 +35,8 @@ impl LogParser<()> for BattleSearcher {
         // bump ptr back until ascii
         let end_idx = buf.iter().rposition(|b| b.is_ascii())?;
         let file_snippet = std::str::from_utf8(&buf[..end_idx]).ok()?;
-        // find last instance of `,"`, replace with '}' to get valid JSON
-        // we know that the only way to see a comma followed by a quote is right after a value.
-        let last_field_sep = file_snippet.rfind(",\"")?;
+        // Assumes minified JSON, and p1team appearing after p1, p2
+        let last_field_sep = file_snippet.rfind(",\"p1team\"")?;
         buf[last_field_sep] = b'}';
         let raw_json = std::str::from_utf8(&buf[..last_field_sep + 1]).ok()?;
         // now we have valid JSON that probably contains p1, p2.
