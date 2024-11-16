@@ -261,7 +261,7 @@ impl Anonymizer {
                             );
                         }
 
-                        return Some(
+                        Some(
                             p2regex
                                 .replace_all(
                                     p1regex
@@ -270,7 +270,7 @@ impl Anonymizer {
                                     &p2_anon as &str,
                                 )
                                 .to_string(),
-                        );
+                        )
                     })
                     .collect::<Vec<_>>(),
             );
