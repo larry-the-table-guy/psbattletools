@@ -12,6 +12,15 @@ use crate::BattleToolsError;
 
 /// Anything that wants to parse logs should implement this
 pub trait LogParser<R> {
+    /// Optional fast path for log handling. Passes the path instead of the JSON because some
+    /// usecases don't need the entire file.
+    /// Returns None if no decision could be made (need to run LogParser::handle_log_file),
+    ///   Some(R) if a result was produced early.
+    /// Errors are funneled into None so that error handling code isn't duplicated (it will be
+    /// handled by the later handle_log_file call).
+    fn fast_handle_log_file(&self, _file_path: &Path) -> Option<R> {
+        None
+    }
     /// Parses an individual log file's JSON
     fn handle_log_file(&self, raw_json: String, file_path: &Path) -> Result<R, BattleToolsError>;
     /// Parses the results from an entire directory.
@@ -82,6 +91,9 @@ where
                         }
 
                         let path = entry.path();
+                        if let Some(res) = self.fast_handle_log_file(&path) {
+                            return Some(res);
+                        };
                         let raw_json = match fs::read_to_string(entry.path()) {
                             Ok(s) => s,
                             Err(e) => {

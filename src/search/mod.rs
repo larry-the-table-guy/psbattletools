@@ -23,6 +23,34 @@ impl BattleSearcher {
 }
 
 impl LogParser<()> for BattleSearcher {
+    fn fast_handle_log_file(&self, path: &Path) -> Option<()> {
+        use std::io::Read;
+        // We expect the p1, p2 fields to be very early in the file and to almost never match
+        // self.user_id. So, we can do a very cheap pass to reject most cases.
+        // We turn errors into None to avoid duplicating error handling, and it's fine perf-wise
+        // because these errors won't be common.
+        let mut buf = [0u8; 256];
+        let mut f = std::fs::File::open(path).ok()?;
+        f.read_exact(&mut buf).ok()?;
+        // bump ptr back until ascii
+        let end_idx = buf.iter().rposition(|b| b.is_ascii())?;
+        let file_snippet = std::str::from_utf8(&buf[..end_idx]).ok()?;
+        // find last instance of `,"`, replace with '}' to get valid JSON
+        // we know that the only way to see a comma followed by a quote is right after a value.
+        let last_field_sep = file_snippet.rfind(",\"")?;
+        buf[last_field_sep] = b'}';
+        let raw_json = std::str::from_utf8(&buf[..last_field_sep + 1]).ok()?;
+        // now we have valid JSON that probably contains p1, p2.
+        // Let's check 'em!
+        let p1id = to_id(gjson::get(&raw_json, "p1").str());
+        let p2id = to_id(gjson::get(&raw_json, "p2").str());
+        if p1id != self.user_id && p2id != self.user_id {
+            // Searched user is not a player in the battle.
+            return Some(());
+        }
+        None
+    }
+
     fn handle_log_file(&self, raw_json: String, path: &Path) -> Result<(), BattleToolsError> {
         let date = match path.parent() {
             Some(p) => p
