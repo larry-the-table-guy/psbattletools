@@ -41,8 +41,8 @@ impl LogParser<()> for BattleSearcher {
         let raw_json = std::str::from_utf8(&buf[..last_field_sep + 1]).ok()?;
         // now we have valid JSON that probably contains p1, p2.
         // Let's check 'em!
-        let p1id = to_id(gjson::get(&raw_json, "p1").str());
-        let p2id = to_id(gjson::get(&raw_json, "p2").str());
+        let p1id = to_id(gjson::get(raw_json, "p1").str());
+        let p2id = to_id(gjson::get(raw_json, "p2").str());
         if p1id != self.user_id && p2id != self.user_id {
             // Searched user is not a player in the battle.
             return Some(());
@@ -186,6 +186,18 @@ mod unit_tests {
         build_test_dir(1_000).unwrap();
 
         let mut searcher = BattleSearcher::new("Rusthaters", false, false);
+        b.iter(|| {
+            searcher
+                .handle_directories(vec![TEST_ROOT_DIR.clone()], None)
+                .unwrap()
+        });
+    }
+
+    #[bench]
+    fn bench_handle_directory_1k_absent(b: &mut Bencher) {
+        build_test_dir(1_000).unwrap();
+
+        let mut searcher = BattleSearcher::new("Nobody", false, false);
         b.iter(|| {
             searcher
                 .handle_directories(vec![TEST_ROOT_DIR.clone()], None)
